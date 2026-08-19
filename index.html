@@ -201,6 +201,15 @@
     border-radius: 14px;
     white-space:nowrap;
   }
+  .progress-tag{
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--gold);
+    padding: 8px 18px;
+    border-radius: 14px;
+    white-space:nowrap;
+  }
   .status-msg{
     font-size: 22px;
     font-weight: 700;
@@ -328,6 +337,25 @@
     margin: 0 0 24px 0;
     font-weight: 400;
   }
+
+  .mini-celebrate{
+    position:fixed;
+    inset:0;
+    background: rgba(88,129,87,0.95);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:#fff;
+    z-index: 1000;
+    padding: 20px;
+    pointer-events:none;
+  }
+  .mini-celebrate p{
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0;
+  }
 </style>
 </head>
 <body>
@@ -385,6 +413,7 @@
     <div class="stage">
       <div class="game-header">
         <span class="level-tag" id="levelTag">Level 1</span>
+        <span class="progress-tag" id="progressTag">Aufgabe 1 von 5</span>
         <button class="btn secondary" onclick="goToCaseScreen()">⟵ Zurück</button>
       </div>
       <p class="status-msg" id="statusMsg">Ziehe die Buchstaben in die richtige Reihenfolge.</p>
@@ -400,14 +429,19 @@
     </div>
   </div>
 
-  <!-- CELEBRATION -->
+  <!-- CELEBRATION (nach 5 geschafften Aufgaben) -->
   <div class="celebrate hidden" id="celebrate">
     <h2 id="celebrateTitle">Super gemacht! 🎉</h2>
-    <p id="celebrateText">Du hast alle Buchstaben richtig sortiert!</p>
+    <p id="celebrateText">Du hast 5 Aufgaben hintereinander richtig gelöst!</p>
     <div>
       <button class="btn" onclick="closeCelebrate(true)">Nochmal spielen</button>
       <button class="btn secondary" onclick="closeCelebrate(false)">Zurück zum Start</button>
     </div>
+  </div>
+
+  <!-- MINI-ERFOLG (nach jeder einzelnen Aufgabe, ausser der 5.) -->
+  <div class="mini-celebrate hidden" id="miniCelebrate">
+    <p id="miniCelebrateText">Aufgabe geschafft! 👍</p>
   </div>
 
 <script>
@@ -419,6 +453,8 @@
   let slotLetters = [];
   let selectedTile = null;
   let filledCount = 0;
+  let roundInStreak = 1;   // wie vielte Aufgabe am Stueck gerade laeuft
+  const STREAK_TARGET = 5; // so viele Aufgaben hintereinander bis zum grossen Lob
 
   function shuffle(arr){
     const a = arr.slice();
@@ -496,6 +532,7 @@
 
   function startLevel(caseType){
     currentCase = caseType;
+    roundInStreak = 1;
     document.getElementById('caseScreen').classList.add('hidden');
     document.getElementById('gameScreen').classList.remove('hidden');
     document.getElementById('levelTag').textContent =
@@ -523,6 +560,7 @@
     renderSlots();
     renderBank();
     setStatus("Ziehe die Buchstaben in die richtige Reihenfolge.", false);
+    document.getElementById('progressTag').textContent = "Aufgabe " + roundInStreak + " von " + STREAK_TARGET;
     fitStage('gameScreen');
   }
 
@@ -585,7 +623,7 @@
       setStatus("Richtig! Weiter so.", false);
       fitStage('gameScreen');
       if(filledCount === correctOrder.length){
-        setTimeout(showCelebration, 300);
+        setTimeout(finishRound, 300);
       }
     } else {
       slotEl.classList.add('wrong-flash');
@@ -604,16 +642,35 @@
     el.classList.toggle('err', !!isError);
   }
 
+  function finishRound(){
+    if(roundInStreak >= STREAK_TARGET){
+      showCelebration();
+    } else {
+      showMiniCelebration();
+    }
+  }
+
+  function showMiniCelebration(){
+    const el = document.getElementById('miniCelebrate');
+    document.getElementById('miniCelebrateText').textContent =
+      "Aufgabe " + roundInStreak + " von " + STREAK_TARGET + " geschafft! 👍";
+    el.classList.remove('hidden');
+    setTimeout(() => {
+      el.classList.add('hidden');
+      roundInStreak++;
+      setupRound();
+    }, 1200);
+  }
+
   function showCelebration(){
     document.getElementById('celebrateText').textContent =
-      currentLevel === 1
-        ? "Du hast das ganze Alphabet richtig sortiert!"
-        : "Du hast den ABC-Ausschnitt richtig sortiert!";
+      "Du hast " + STREAK_TARGET + " Aufgaben hintereinander richtig sortiert!";
     document.getElementById('celebrate').classList.remove('hidden');
   }
 
   function closeCelebrate(again){
     document.getElementById('celebrate').classList.add('hidden');
+    roundInStreak = 1;
     if(again){
       setupRound();
     } else {
